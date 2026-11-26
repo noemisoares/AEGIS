@@ -15,29 +15,56 @@ Este documento detalha o processo de implantação do **AEGIS** em arquitetura d
 
 ---
 
-## 🗄️ 2. Passo a Passo: Banco de Dados PostgreSQL
+## 🗄️ 2. Passo a Passo: Banco de Dados PostgreSQL (Supabase)
 
-O AEGIS possui suporte nativo dual para **SQLite** (ambiente de desenvolvimento local) e **PostgreSQL** (produção).
+O AEGIS utiliza **PostgreSQL** hospedado no **Supabase** como seu banco de dados principal.
 
-### 2.1. Criar a Instância PostgreSQL
-1. Crie uma conta no [Neon.tech](https://neon.tech), [Supabase](https://supabase.com) ou diretamente no **Render PostgreSQL**.
-2. Copie a string de conexão SSL gerada:
-   ```env
-   DATABASE_URL="postgresql://usuario:senha@ep-xyz.render.com/aegis_prod?sslmode=require"
-   ```
+### 2.1. Configuração do Projeto Supabase
+- **Nome do Projeto:** `AEGIS-Database`
+- **Região:** Ohio — AWS US East 2 (`us-east-2`)
+- **Project Reference:** `rnemhexpglipkwvbkyov`
 
-### 2.2. Executar as Migrações em Produção
-O repositório já inclui o script inteligente `prepare-db.js`, que detecta a URL do banco e ajusta o schema automaticamente:
+### 2.2. Modalidades de Conexão: Session Pooler vs Transaction Pooler
+O Supabase disponibiliza diferentes endpoints via PgBouncer / Supavisor:
+
+1. **Session Pooler (Porta 5432 - Recomendado para Render Web Service):**
+   - Ideal para aplicações persistentes Node.js com estado de sessão e suporte a conexões IPv4.
+   - Formato:
+     ```env
+     DATABASE_URL="postgresql://postgres.rnemhexpglipkwvbkyov:[SUA-SENHA]@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+     ```
+
+2. **Transaction Pooler (Porta 6543 - Otimizado para Serverless / Alta Concorrência):**
+   - Reutiliza conexões transacionais. Quando utilizado com o Prisma, requer o parâmetro `?pgbouncer=true`.
+   - Formato:
+     ```env
+     DATABASE_URL="postgresql://postgres.rnemhexpglipkwvbkyov:[SUA-SENHA]@aws-1-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+     ```
+
+3. **Direct URL / Session para Migrações (`DIRECT_URL`):**
+   - O Prisma Migrate executa comandos DDL com advisory locks e requer uma conexão direta ou em modo Session (porta 5432).
+   - Formato:
+     ```env
+     DIRECT_URL="postgresql://postgres.rnemhexpglipkwvbkyov:[SUA-SENHA]@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+     ```
+
+### 2.3. Executar Migrações Versionadas (`prisma migrate deploy`)
+O projeto utiliza migrações Prisma versionadas e reproduzíveis (`backend/prisma/migrations/`).
+Para aplicar as migrações no Supabase:
 
 ```bash
 cd backend
 npm run db:deploy
 ```
+*(Executa internamente `prisma migrate deploy`, aplicando o histórico de migrações sem risco de perda de dados)*
 
-Para carregar os 100 colaboradores fictícios e os modelos de simulação no novo banco em nuvem:
+### 2.4. Popular Dados de Demonstração (Seed)
+Para carregar os 100 colaboradores fictícios da AEGIS Corporation e os modelos de simulação:
+
 ```bash
-npm run seed
+npm run db:seed
 ```
+*(O seed é idempotente via `upsert`, não duplicando dados caso seja reexecutado)*
 
 ---
 
