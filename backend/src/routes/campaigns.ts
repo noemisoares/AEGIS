@@ -4,6 +4,7 @@ import { authenticate, requireManager, AuthRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
 import { logEvent } from '../services/eventService';
 import { calculateAndStoreHri } from '../services/hriService';
+import { startCampaign } from '../services/campaignService';
 
 const router = Router();
 
@@ -77,9 +78,11 @@ router.post(
       return;
     }
 
-    const { name, description, templateId, scheduledAt, targetAll = false, targetUserIds = [], targetDepartmentIds = [] } = req.body;
+    const { name, description, templateId, scheduledAt, targetAll = false, isRecurring = false, targetUserIds = [], targetDepartmentIds = [] } = req.body;
 
     try {
+      const isScheduled = scheduledAt && new Date(scheduledAt) > new Date();
+
       const campaign = await prisma.campaign.create({
         data: {
           name,
@@ -87,7 +90,9 @@ router.post(
           templateId,
           organizationId: req.user!.organizationId,
           scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
+          status: isScheduled ? 'SCHEDULED' : 'DRAFT',
           targetAll,
+          isRecurring: Boolean(isRecurring),
           createdById: req.user!.id,
         },
       });
@@ -106,99 +111,26 @@ router.post(
 // POST /api/campaigns/:id/start - Start campaign
 router.post('/:id/start', authenticate, requireManager, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const campaign = await prisma.campaign.findFirst({
-      where: { id: req.params.id, organizationId: req.user!.organizationId },
-    });
-
-    if (!campaign) {
-      res.status(404).json({ error: 'Campaign not found' });
-      return;
-    }
-
-    if (campaign.status !== 'DRAFT' && campaign.status !== 'SCHEDULED') {
-      res.status(400).json({ error: 'Campaign cannot be started in its current status' });
-      return;
-    }
-
     const { targetUserIds = [], targetDepartmentIds = [] } = req.body;
 
-    // Determine target users
-    let userIds: string[] = targetUserIds;
-
-    if (campaign.targetAll || (targetDepartmentIds.length === 0 && targetUserIds.length === 0)) {
-      // Target all active collaborators
-      const allUsers = await prisma.user.findMany({
-        where: {
-          organizationId: req.user!.organizationId,
-          status: 'ACTIVE',
-          role: 'COLLABORATOR',
-        },
-        select: { id: true },
-      });
-      userIds = allUsers.map(u => u.id);
-    } else if (targetDepartmentIds.length > 0) {
-      // Target users by department
-      const deptUsers = await prisma.user.findMany({
-        where: {
-          organizationId: req.user!.organizationId,
-          departmentId: { in: targetDepartmentIds },
-          status: 'ACTIVE',
-          role: 'COLLABORATOR',
-        },
-        select: { id: true },
-      });
-      userIds = [...new Set([...userIds, ...deptUsers.map(u => u.id)])];
-    }
-
-    // Update campaign status
-    const updatedCampaign = await prisma.campaign.update({
-      where: { id: campaign.id },
-      data: { status: 'ACTIVE', startedAt: new Date() },
+    const result = await startCampaign(req.params.id, req.user!.organizationId, {
+      targetUserIds,
+      targetDepartmentIds,
+      initiatedByUserId: req.user!.id,
     });
 
-    // Create campaign targets and simulation results
-    const now = new Date();
-    
-    await prisma.$transaction(async (tx) => {
-      for (const userId of userIds) {
-        // Upsert campaign target
-        await tx.campaignTarget.upsert({
-          where: { campaignId_userId: { campaignId: campaign.id, userId } },
-          create: { campaignId: campaign.id, userId, sentAt: now },
-          update: { sentAt: now },
-        });
-
-        // Upsert simulation result
-        await tx.simulationResult.upsert({
-          where: { campaignId_userId: { campaignId: campaign.id, userId } },
-          create: {
-            campaignId: campaign.id,
-            userId,
-            status: 'SENT',
-            sentAt: now,
-          },
-          update: { sentAt: now, status: 'SENT' },
-        });
-      }
+    const updatedCampaign = await prisma.campaign.findUnique({
+      where: { id: req.params.id },
     });
-
-    await logEvent('CAMPAIGN_STARTED', req.user!.id, campaign.id, req.user!.organizationId, undefined, {
-      campaignName: campaign.name,
-      targetCount: userIds.length,
-    });
-
-    // Log individual simulation sent events
-    for (const userId of userIds.slice(0, 20)) { // limit broadcast spam
-      await logEvent('SIMULATION_SENT', userId, campaign.id, req.user!.organizationId, undefined, {});
-    }
 
     res.json({
       ...updatedCampaign,
-      targetCount: userIds.length,
+      targetCount: result.targetCount,
     });
-  } catch (error) {
-    console.error('Campaign start error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (error: any) {
+    console.error('Campaign start error:', error.message);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({ error: error.message || 'Internal server error' });
   }
 });
 

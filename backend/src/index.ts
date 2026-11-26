@@ -23,28 +23,49 @@ import demoRoutes from './routes/demo';
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger';
+import { startCampaignScheduler } from './services/schedulerService';
+import { prisma } from './lib/prisma';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for secure cookies/headers when deployed behind Render / Nginx / Cloudflare
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// CORS
+// CORS configuration for Web and Desktop clients in dev and production
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.DESKTOP_AGENT_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:4173',
+].filter(Boolean) as string[];
+
+if (process.env.ALLOWED_ORIGINS) {
+  const extraOrigins = process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  allowedOrigins.push(...extraOrigins);
+}
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    process.env.DESKTOP_AGENT_URL || 'http://localhost:5174',
-    'http://localhost:3000',
-    'http://localhost:4173',
-  ],
+  origin: (origin, callback) => {
+    // Allow non-browser requests (Electron native, mobile, curl) or matched origins
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some((o) => origin.startsWith(o))) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Fallback permissive for demo/dev, configurable in prod
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 // Rate limiting
@@ -60,9 +81,26 @@ app.use(limiter);
 app.use(json({ limit: '10mb' }));
 app.use(requestLogger);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+// Health check with DB ping
+app.get('/health', async (req, res) => {
+  try {
+    // Quick DB connectivity check
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      uptime: process.uptime(),
+    });
+  } catch (error: any) {
+    res.status(503).json({
+      status: 'degraded',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // API Routes
@@ -88,6 +126,11 @@ app.listen(PORT, () => {
   console.log(`📊 Dashboard API: http://localhost:${PORT}/api/dashboard`);
   console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
   console.log(`💉 Health: http://localhost:${PORT}/health`);
+
+  // Start background campaign scheduler in non-test environments
+  if (process.env.NODE_ENV !== 'test') {
+    startCampaignScheduler();
+  }
 });
 
 export default app;

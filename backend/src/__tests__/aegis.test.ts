@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../index';
 import { prisma } from '../lib/prisma';
 import { calculateHriScore, getRiskLevel } from '../services/hriService';
+import { processScheduledCampaigns } from '../services/schedulerService';
 
 describe('AEGIS Cybersecurity Behavioral Platform Tests', () => {
   let managerToken = '';
@@ -210,6 +211,77 @@ describe('AEGIS Cybersecurity Behavioral Platform Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.header['content-type']).toContain('application/pdf');
+    });
+  });
+
+  describe('5. Automated Scheduling & Threat Review Workflow', () => {
+    it('should respond to /health with database connected status', async () => {
+      const res = await request(app).get('/health');
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+      expect(res.body.database).toBe('connected');
+    });
+
+    it('should automatically process and trigger scheduled campaigns due for dispatch', async () => {
+      // Fetch a template
+      const templates = await request(app)
+        .get('/api/campaigns/templates/list')
+        .set('Authorization', `Bearer ${managerToken}`);
+      const templateId = templates.body[0].id;
+
+      // Create a campaign scheduled in the past (ready for auto-dispatch)
+      const pastDate = new Date(Date.now() - 60000); // 1 minute ago
+      const campRes = await request(app)
+        .post('/api/campaigns')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          name: 'Campanha Agendada Automatizada',
+          templateId,
+          scheduledAt: pastDate.toISOString(),
+          targetAll: true,
+          isRecurring: true,
+        });
+
+      expect(campRes.status).toBe(201);
+      const scheduledCampId = campRes.body.id;
+
+      // Manually set status to SCHEDULED (in case the API initialized it based on date check)
+      await prisma.campaign.update({
+        where: { id: scheduledCampId },
+        data: { status: 'SCHEDULED', scheduledAt: pastDate },
+      });
+
+      // Run scheduler process
+      const processed = await processScheduledCampaigns();
+      expect(processed).toBeGreaterThanOrEqual(1);
+
+      // Verify campaign is now ACTIVE
+      const updated = await prisma.campaign.findUnique({
+        where: { id: scheduledCampId },
+      });
+      expect(updated?.status).toBe('ACTIVE');
+      expect(updated?.startedAt).not.toBeNull();
+    });
+
+    it('should allow SOC manager to update threat report review status', async () => {
+      // Find an existing threat report
+      const reportsRes = await request(app)
+        .get('/api/threat-reports')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(reportsRes.status).toBe(200);
+      expect(reportsRes.body.length).toBeGreaterThan(0);
+      const reportId = reportsRes.body[0].id;
+
+      // Update status to CONFIRMED
+      const patchRes = await request(app)
+        .patch(`/api/threat-reports/${reportId}/status`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ status: 'CONFIRMED', isCorrect: true });
+
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.status).toBe('CONFIRMED');
+      expect(patchRes.body.isCorrect).toBe(true);
     });
   });
 });

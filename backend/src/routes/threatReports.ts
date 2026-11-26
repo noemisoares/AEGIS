@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireManager, AuthRequest } from '../middleware/auth';
 import { logEvent } from '../services/eventService';
 import { awardPoints } from '../services/pointsService';
 import { calculateAndStoreUserHri } from '../services/hriService';
@@ -152,6 +152,35 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
     });
 
     res.json(reports);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/threat-reports/:id/status - Update threat report review status (SOC team)
+router.patch('/:id/status', authenticate, requireManager, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status, isCorrect } = req.body;
+
+    const report = await prisma.threatReport.findFirst({
+      where: { id, user: { organizationId: req.user!.organizationId } },
+    });
+
+    if (!report) {
+      res.status(404).json({ error: 'Report not found' });
+      return;
+    }
+
+    const updated = await prisma.threatReport.update({
+      where: { id },
+      data: {
+        status: status || report.status,
+        isCorrect: typeof isCorrect === 'boolean' ? isCorrect : report.isCorrect,
+      },
+    });
+
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
