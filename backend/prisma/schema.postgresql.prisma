@@ -1,0 +1,327 @@
+// AEGIS Prisma Schema - PostgreSQL Production
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================
+// ORGANIZATIONS
+// =====================
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  domain      String?
+  description String?
+  logoUrl     String?
+  isDemo      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  departments       Department[]
+  users             User[]
+  campaigns         Campaign[]
+  phishingTemplates PhishingTemplate[]
+}
+
+// =====================
+// DEPARTMENTS / SECTORS
+// =====================
+model Department {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+  hriHistory   HriHistory[]
+}
+
+// =====================
+// USERS (Collaborators + Managers)
+// =====================
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           String    @default("COLLABORATOR") // SUPER_ADMIN, MANAGER, COLLABORATOR
+  jobTitle       String?
+  departmentId   String?
+  organizationId String
+  status         String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  avatarUrl      String?
+  isDemo         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastLoginAt    DateTime?
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department        Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  points            UserPoints?
+  pointTransactions PointTransaction[]
+  simulationResults SimulationResult[]
+  threatReports     ThreatReport[]
+  pillCompletion    PillCompletion[]
+  hriScores         HriScore[]
+  auditLogs         AuditLog[]
+}
+
+// =====================
+// POINTS SYSTEM
+// =====================
+model UserPoints {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  totalPoints Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PointTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  points      Int
+  reason      String   // THREAT_REPORTED_CORRECT, THREAT_IDENTIFIED, PILL_COMPLETED, CAMPAIGN_PARTICIPATION, BONUS
+  referenceId String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// =====================
+// PHISHING TEMPLATES
+// =====================
+model PhishingTemplate {
+  id             String   @id @default(uuid())
+  name           String
+  subject        String
+  bodyHtml       String
+  bodyText       String
+  senderName     String
+  senderEmail    String
+  difficulty     String   @default("MEDIUM") // EASY, MEDIUM, HARD
+  category       String
+  description    String?
+  organizationId String?
+  isGlobal       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  campaigns    Campaign[]
+  pills        EducationalPill[]
+}
+
+// =====================
+// CAMPAIGNS
+// =====================
+model Campaign {
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  status         String    @default("DRAFT") // DRAFT, SCHEDULED, ACTIVE, COMPLETED, CANCELLED
+  templateId     String
+  organizationId String
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  targetAll      Boolean   @default(false)
+  isRecurring    Boolean   @default(false) // Weekly automatic execution
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template          PhishingTemplate   @relation(fields: [templateId], references: [id])
+  targets           CampaignTarget[]
+  simulationResults SimulationResult[]
+  threatReports     ThreatReport[]
+  hriSnapshots      HriHistory[]
+}
+
+model CampaignTarget {
+  id         String    @id @default(uuid())
+  campaignId String
+  userId     String
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+// =====================
+// SIMULATION RESULTS (behavior tracking)
+// =====================
+model SimulationResult {
+  id              String    @id @default(uuid())
+  campaignId      String
+  userId          String
+  status          String    @default("SENT") // SENT, OPENED, CLICKED, REPORTED, COMPLETED
+  sentAt          DateTime  @default(now())
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  reportedAt      DateTime?
+  pillShownAt     DateTime?
+  pillCompletedAt DateTime?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+// =====================
+// THREAT REPORTS
+// =====================
+model ThreatReport {
+  id            String   @id @default(uuid())
+  userId        String
+  campaignId    String?
+  reportType    String   @default("SIMULATION") // SIMULATION, REAL_THREAT, SUSPICIOUS_EMAIL, SUSPICIOUS_LINK
+  description   String?
+  isCorrect     Boolean?
+  status        String   @default("PENDING") // PENDING, CONFIRMED, REJECTED
+  pointsAwarded Int      @default(0)
+  isDuplicate   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+}
+
+// =====================
+// EDUCATIONAL PILLS
+// =====================
+model EducationalPill {
+  id            String   @id @default(uuid())
+  templateId    String?
+  title         String
+  content       String
+  tips          String
+  whatWentWrong String
+  correctAction String
+  category      String
+  difficulty    String   @default("MEDIUM")
+  isGlobal      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  template    PhishingTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  completions PillCompletion[]
+}
+
+model PillCompletion {
+  id          String   @id @default(uuid())
+  userId      String
+  pillId      String
+  campaignId  String?
+  completedAt DateTime @default(now())
+  timeSpent   Int? // seconds
+
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pill EducationalPill @relation(fields: [pillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pillId, campaignId])
+}
+
+// =====================
+// HUMAN RISK INDEX
+// =====================
+model HriScore {
+  id                 String   @id @default(uuid())
+  userId             String
+  score              Float // 0-100, higher = more risk
+  riskLevel          String // LOW, MODERATE, HIGH, CRITICAL
+  clickRate          Float
+  reportRate         Float
+  pillCompletionRate Float
+  recidivism         Float
+  participationRate  Float
+  observationCount   Int
+  calculatedAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, calculatedAt])
+}
+
+model HriHistory {
+  id           String   @id @default(uuid())
+  departmentId String
+  campaignId   String?
+  avgScore     Float
+  riskLevel    String // LOW, MODERATE, HIGH, CRITICAL
+  userCount    Int
+  calculatedAt DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  campaign   Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, calculatedAt])
+}
+
+// =====================
+// EVENTS LOG (for real-time dashboard)
+// =====================
+model EventLog {
+  id             String   @id @default(uuid())
+  eventType      String // CAMPAIGN_CREATED, CAMPAIGN_STARTED, etc.
+  userId         String?
+  campaignId     String?
+  organizationId String?
+  departmentId   String?
+  metadata       String? // JSON string
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+// =====================
+// AUDIT LOGS
+// =====================
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  details    String? // JSON string
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// =====================
+// REPORTS
+// =====================
+model Report {
+  id             String    @id @default(uuid())
+  title          String
+  type           String    @default("GENERAL") // GENERAL, BY_DEPARTMENT, BY_CAMPAIGN, AUDIT, HRI
+  organizationId String
+  generatedById  String?
+  filters        String? // JSON string
+  filePath       String?
+  format         String    @default("PDF") // PDF, CSV
+  status         String    @default("PENDING") // PENDING, GENERATING, READY, FAILED
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+}
