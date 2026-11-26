@@ -32,29 +32,35 @@ Substituindo métodos tradicionais ineficazes (como palestras anuais e cursos EA
                   ┌────────────────────────────────────────┐
                   │       AGENTE DESKTOP (Endpoint)        │
                   │   Electron + React + TypeScript + IPC   │
+                  │   (Suporte a Nuvem & Config Dinâmica)  │
                   └──────────────────┬─────────────────────┘
-                                     │ HTTP / REST
+                                     │ HTTPS / REST
                                      ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        AEGIS BACKEND API                               │
+│                   AEGIS BACKEND API (Render Cloud)                     │
 │              Node.js + Express + TypeScript + Prisma ORM               │
 │                                                                        │
 │  ┌───────────────┐ ┌────────────────┐ ┌─────────────────────────────┐  │
 │  │ Auth & RBAC   │ │ HRI Engine     │ │ Threat & Gamification Engine│  │
 │  └───────┬───────┘ └───────┬────────┘ └──────────────┬──────────────┘  │
 │          │                 │                         │                 │
-│          ▼                 ▼                         ▼                 │
+│  ┌───────┴─────────────────┴─────────────────────────┴──────────────┐  │
+│  │     Agendador Automático de Campanhas (Scheduler Service)        │  │
+│  └─────────────────────────┬────────────────────────────────────────┘  │
+│                            ▼                                           │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │     Banco de Dados Relacional (SQLite / PostgreSQL)              │  │
+│  │     Banco de Dados Relacional (PostgreSQL Nuvem / SQLite Dev)    │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────┬───────────────────────────────────┘
                                      │ SSE (Server-Sent Events) + REST
                                      ▼
                   ┌────────────────────────────────────────┐
-                  │          PAINEL SOC (Web)              │
+                  │          PAINEL SOC (Vercel)           │
                   │ React + Vite + TailwindCSS + Recharts  │
                   └────────────────────────────────────────┘
 ```
+
+> 📖 **Guia Completo de Implantação:** Consulte o arquivo [DEPLOYMENT.md](file:///c:/Users/Samsung/Documents/GitHub/AEGIS/DEPLOYMENT.md) para o passo a passo de deploy no **Vercel**, **Render**, banco **PostgreSQL** e geração do instalador Windows.
 
 ---
 
