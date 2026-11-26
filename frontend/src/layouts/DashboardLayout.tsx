@@ -2,9 +2,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Shield, LayoutDashboard, Users, Target, TrendingUp,
-  FileText, LogOut, Bell, Settings
+  FileText, LogOut, Bell, Settings, Flag
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../lib/api';
 
 function NavItem({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
   return (
@@ -37,24 +38,24 @@ export default function DashboardLayout() {
     const token = localStorage.getItem('aegis_token');
     if (!token) return;
 
-    const eventSource = new EventSource(`/api/sse/events`, {
-      // Note: EventSource doesn't support custom headers,
-      // so we append token as query param workaround via axios interceptor
-    });
+    let isSubscribed = true;
+    let reconnectTimeout: any = null;
+    let controller = new AbortController();
 
-    // Use fetch-based SSE for auth
-    const controller = new AbortController();
-    
     const connectSSE = () => {
-      fetch('/api/sse/events', {
+      if (!isSubscribed) return;
+
+      fetch(`${API_BASE}/sse/events`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
       }).then(async (response) => {
-        if (!response.ok || !response.body) return;
+        if (!response.ok || !response.body) {
+          throw new Error('SSE connection failed');
+        }
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         
-        while (true) {
+        while (isSubscribed) {
           const { done, value } = await reader.read();
           if (done) break;
           
@@ -73,19 +74,28 @@ export default function DashboardLayout() {
                       ...prev.slice(0, 19)
                     ]);
                     setNewNotifCount(prev => prev + 1);
+
+                    // Notify pages to refresh data
+                    window.dispatchEvent(new CustomEvent('aegis:event', { detail: data }));
                   }
                 }
               } catch {}
             }
           }
         }
-      }).catch(() => {});
+      }).catch((err) => {
+        if (isSubscribed && err.name !== 'AbortError') {
+          // Reconnect with backoff
+          reconnectTimeout = setTimeout(connectSSE, 5000);
+        }
+      });
     };
 
     connectSSE();
-    eventSource.close();
 
     return () => {
+      isSubscribed = false;
+      clearTimeout(reconnectTimeout);
       controller.abort();
     };
   }, []);
@@ -129,6 +139,7 @@ export default function DashboardLayout() {
           <NavItem to="/dashboard" icon={LayoutDashboard} label="Visão Geral" />
           <NavItem to="/dashboard/colaboradores" icon={Users} label="Colaboradores" />
           <NavItem to="/dashboard/campanhas" icon={Target} label="Campanhas" />
+          <NavItem to="/dashboard/denuncias" icon={Flag} label="Denúncias" />
           
           <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-3 mb-2 mt-5">Governança</p>
           <NavItem to="/dashboard/hri" icon={TrendingUp} label="Risco Humano (HRI)" />

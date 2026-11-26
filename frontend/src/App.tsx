@@ -9,6 +9,7 @@ import UsersPage from './pages/manager/UsersPage';
 import CampaignsPage from './pages/manager/CampaignsPage';
 import HriPage from './pages/manager/HriPage';
 import ReportsPage from './pages/manager/ReportsPage';
+import ThreatReportsPage from './pages/manager/ThreatReportsPage';
 import CollaboratorPage from './pages/collaborator/CollaboratorPage';
 import SimulationPage from './pages/collaborator/SimulationPage';
 
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="colaboradores" element={<UsersPage />} />
         <Route path="campanhas" element={<CampaignsPage />} />
+        <Route path="denuncias" element={<ThreatReportsPage />} />
         <Route path="hri" element={<HriPage />} />
         <Route path="relatorios" element={<ReportsPage />} />
       </Route>
