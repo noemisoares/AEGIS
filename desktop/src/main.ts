@@ -70,6 +70,10 @@ ipcMain.handle('show-notification', (_event, title: string, body: string) => {
   return true;
 });
 
+ipcMain.handle('get-api-url', () => {
+  return process.env.AEGIS_API_URL || process.env.VITE_API_URL || null;
+});
+
 app.whenReady().then(() => {
   createWindow();
 

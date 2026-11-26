@@ -7,7 +7,31 @@
     "build": "tsc && vite build",
     "dev": "concurrently \"vite\" \"tsc -w\" \"electron .\"",
     "start": "electron dist/main.js",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.aegis.desktopagent",
+    "productName": "AEGIS Desktop Agent",
+    "directories": {
+      "output": "dist-release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    }
   },
   "dependencies": {
     "axios": "^1.6.5",

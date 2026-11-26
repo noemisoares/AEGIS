@@ -11,10 +11,19 @@ import {
   LogOut,
   UserCheck,
   TrendingDown,
-  BellRing
+  BellRing,
+  Settings
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3001/api';
+const resolveApiBase = (): string => {
+  const custom = localStorage.getItem('aegis_api_url');
+  if (custom) return custom.endsWith('/api') ? custom : `${custom.replace(/\/$/, '')}/api`;
+  const envUrl = (window as any)?._AEGIS_API_URL || (typeof process !== 'undefined' ? process.env?.VITE_API_URL : undefined);
+  if (envUrl) return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/$/, '')}/api`;
+  return 'http://localhost:3001/api';
+};
+
+let API_BASE = resolveApiBase();
 
 interface Collaborator {
   id: string;
@@ -70,6 +79,38 @@ export default function App() {
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
   const [interactedError, setInteractedError] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [apiUrlInput, setApiUrlInput] = useState(API_BASE);
+
+  useEffect(() => {
+    const initApi = async () => {
+      if (window.electronAPI?.getApiUrl) {
+        try {
+          const remoteUrl = await window.electronAPI.getApiUrl();
+          if (remoteUrl && !localStorage.getItem('aegis_api_url')) {
+            const formatted = remoteUrl.endsWith('/api') ? remoteUrl : `${remoteUrl.replace(/\/$/, '')}/api`;
+            API_BASE = formatted;
+            setApiUrlInput(formatted);
+          }
+        } catch (e) {
+          console.warn('Could not retrieve API URL from main process:', e);
+        }
+      }
+    };
+    initApi();
+  }, []);
+
+  const handleSaveApiUrl = () => {
+    const cleanUrl = apiUrlInput.trim();
+    if (cleanUrl) {
+      const formatted = cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl.replace(/\/$/, '')}/api`;
+      localStorage.setItem('aegis_api_url', formatted);
+      API_BASE = formatted;
+      setApiUrlInput(formatted);
+      setShowConfig(false);
+      if (token) fetchProfile(token);
+    }
+  };
 
   // Authenticate / fetch profile
   const fetchProfile = async (authToken: string) => {
@@ -477,11 +518,40 @@ export default function App() {
       </div>
 
       {/* Footer info */}
-      <div className="mt-4 pt-3 border-t border-slate-900 text-center">
+      <div className="mt-4 pt-3 border-t border-slate-900 text-center flex items-center justify-between">
         <p className="text-[10px] text-slate-600">
-          AEGIS Security Agent v1.0.0 · Governança e Aprendizado Ativo
+          AEGIS Security Agent v1.0.0
         </p>
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="text-slate-500 hover:text-slate-300 transition"
+          title="Configuração de Servidor API"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+      {showConfig && (
+        <div className="mt-3 p-3 bg-slate-900/90 border border-slate-800 rounded-xl text-left">
+          <p className="text-[11px] font-semibold text-slate-300 mb-1.5">Endereço da API do Backend:</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={apiUrlInput}
+              onChange={(e) => setApiUrlInput(e.target.value)}
+              placeholder="https://api-aegis.onrender.com/api"
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={handleSaveApiUrl}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded-lg font-medium"
+            >
+              Salvar
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">Configurável para ambiente de Nuvem ou Localhost.</p>
+        </div>
+      )}
     </div>
   );
 }
