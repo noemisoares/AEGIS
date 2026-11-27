@@ -21,6 +21,7 @@ export interface ReportData {
     hriHistory?: Array<{ calculatedAt: Date }>;
   }>;
   simulations: Array<{
+    campaignId?: string;
     sentAt?: Date;
     openedAt?: Date | null;
     clickedAt: Date | null;
@@ -495,7 +496,9 @@ export function generateCsvReport(data: ReportData, reportType: ReportType = 'GE
         'Data de Criação',
       ];
       const rows = data.campaigns.map((c) => {
-        const campSims = data.simulations.filter((s) => s.campaign.name === c.name);
+        const campSims = data.simulations.filter((s) =>
+          s.campaignId ? s.campaignId === c.id : s.campaign.name === c.name
+        );
         const clicks = campSims.filter((s) => s.clickedAt).length;
         const clickRate = campSims.length > 0 ? ((clicks / campSims.length) * 100).toFixed(1) : '0.0';
         return [

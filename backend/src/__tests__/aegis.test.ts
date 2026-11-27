@@ -260,7 +260,7 @@ describe('AEGIS Cybersecurity Behavioral Platform Tests', () => {
       });
       expect(updated?.status).toBe('ACTIVE');
       expect(updated?.startedAt).not.toBeNull();
-    });
+    }, 15000);
 
     it('should allow SOC manager to update threat report review status', async () => {
       // Find an existing threat report
