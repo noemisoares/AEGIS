@@ -35,11 +35,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('aegis_token');
     const storedUser = localStorage.getItem('aegis_user');
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (storedToken && storedUser && storedUser !== 'undefined') {
+      try {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem('aegis_token');
+        localStorage.removeItem('aegis_user');
+      }
       // Verify token is still valid
       api.get('/auth/me').then(res => {
+        if (!res.data || typeof res.data !== 'object' || !res.data.id) {
+          throw new Error('INVALID_API_RESPONSE');
+        }
         setUser(res.data);
         localStorage.setItem('aegis_user', JSON.stringify(res.data));
       }).catch(() => {
@@ -49,13 +57,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }).finally(() => setIsLoading(false));
     } else {
+      localStorage.removeItem('aegis_token');
+      localStorage.removeItem('aegis_user');
       setIsLoading(false);
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password });
-    const { token: newToken, user: newUser } = res.data;
+    const { token: newToken, user: newUser } = res.data || {};
+    if (!newToken || !newUser) {
+      throw new Error('API_UNAVAILABLE');
+    }
     localStorage.setItem('aegis_token', newToken);
     localStorage.setItem('aegis_user', JSON.stringify(newUser));
     setToken(newToken);

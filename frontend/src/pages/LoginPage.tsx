@@ -17,8 +17,22 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Credenciais inválidas');
+      const axiosErr = err as {
+        message?: string;
+        response?: { status?: number; data?: { error?: string } };
+      };
+      const status = axiosErr?.response?.status;
+      const apiMsg = axiosErr?.response?.data?.error;
+
+      if (status === 401) {
+        setError(apiMsg === 'Invalid credentials' ? 'Credenciais inválidas' : apiMsg || 'Credenciais inválidas');
+      } else if (status === 400) {
+        setError('Informe um e-mail válido e sua senha.');
+      } else if (axiosErr?.message === 'API_UNAVAILABLE' || !axiosErr?.response || (status && status >= 500) || status === 404 || status === 405) {
+        setError('Servidor da API indisponível. Verifique se o backend está em execução e se VITE_API_URL está configurada.');
+      } else {
+        setError(apiMsg || 'Erro ao autenticar na plataforma.');
+      }
     } finally {
       setLoading(false);
     }
