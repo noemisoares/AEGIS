@@ -25,7 +25,8 @@ O MVP do **AEGIS** demonstra, em ambiente web funcional, como uma organização 
 Acesse o sistema diretamente pelo navegador através do endereço principal da aplicação web:
 
 - **Aplicação Web (Principal):** [https://aegis-frontend-mu.vercel.app](https://aegis-frontend-mu.vercel.app)
-- **Backend / API:** [https://aegis-backend-irhc.onrender.com](https://aegis-backend-irhc.onrender.com)
+- **Backend / API (verificação de disponibilidade):** [https://aegis-backend-irhc.onrender.com/health](https://aegis-backend-irhc.onrender.com/health)
+  > Este endpoint retorna o status operacional do servidor. O backend não possui interface web — ele é consumido internamente pela aplicação.
 
 Para entrar na plataforma, utilize as credenciais fornecidas pelo administrador responsável pela organização ou pela equipe de demonstração.
 
@@ -33,7 +34,7 @@ Para entrar na plataforma, utilize as credenciais fornecidas pelo administrador 
 
 ## 3. Funcionalidades Implementadas
 
-Todas as funcionalidades abaixo estão integradas ao backend e persistidas no banco de dados:
+As funcionalidades abaixo estão disponíveis na versão atual do sistema:
 
 ### Painel SOC e Indicadores Gerais
 - Visão executiva consolidada para gestores e profissionais de segurança (`/dashboard`).
