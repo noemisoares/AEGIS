@@ -96,12 +96,12 @@ router.post('/reports/generate', authenticate, requireManager, async (req: AuthR
     };
 
     if (format === 'CSV') {
-      const csv = generateCsvReport(reportData);
-      res.setHeader('Content-Type', 'text/csv');
+      const csv = generateCsvReport(reportData, type);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="aegis-report-${Date.now()}.csv"`);
       res.send(csv);
     } else {
-      const pdfBuffer = await generatePdfReport(reportData, title || 'Relatório AEGIS');
+      const pdfBuffer = await generatePdfReport(reportData, title || 'Relatório AEGIS', type);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="aegis-report-${Date.now()}.pdf"`);
       res.send(pdfBuffer);

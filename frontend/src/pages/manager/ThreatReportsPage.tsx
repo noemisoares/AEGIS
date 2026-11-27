@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../lib/api';
-import { Flag, CheckCircle, XCircle, Clock, Search, ShieldAlert, User, Calendar } from 'lucide-react';
+import { Flag, CheckCircle, XCircle, Clock, Search, ShieldAlert, User, Calendar, Target, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -194,8 +194,18 @@ export default function ThreatReportsPage() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-blue-400 text-xs font-medium block">
-                        {report.reportType === 'SIMULATION' ? '🎯 Simulação' : '⚠️ Ameaça Real'}
+                      <span className="text-blue-400 text-xs font-medium flex items-center gap-1">
+                        {report.reportType === 'SIMULATION' ? (
+                          <>
+                            <Target className="w-3.5 h-3.5 shrink-0" />
+                            <span>Simulação</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>Ameaça Real</span>
+                          </>
+                        )}
                       </span>
                       <span className="text-slate-400 text-xs truncate max-w-[200px] block">
                         {report.campaign ? report.campaign.name : 'Reporte Avulso'}

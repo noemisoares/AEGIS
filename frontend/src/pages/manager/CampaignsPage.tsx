@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../lib/api';
-import { Plus, Play, CheckCircle, Clock, AlertCircle, ChevronRight, X } from 'lucide-react';
+import { Plus, Play, CheckCircle, Clock, AlertCircle, ChevronRight, X, Loader2, Bot, Lightbulb } from 'lucide-react';
 
 interface Campaign {
   id: string;
@@ -270,7 +270,17 @@ export default function CampaignsPage() {
                     disabled={simulating}
                     className="btn-secondary flex items-center gap-2"
                   >
-                    {simulating ? '⏳ Simulando...' : '🤖 Simular Comportamentos (Demo)'}
+                    {simulating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        <span>Simulando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-4 h-4 shrink-0" />
+                        <span>Simular Comportamentos (Demo)</span>
+                      </>
+                    )}
                   </button>
                   <button onClick={() => completeCampaign(selectedCampaign.id)} className="btn-secondary flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
@@ -282,9 +292,12 @@ export default function CampaignsPage() {
 
             {selectedCampaign.status === 'ACTIVE' && (
               <div className="mt-4 bg-blue-900/20 border border-blue-800 rounded-lg p-3">
-                <p className="text-blue-300 text-sm">
-                  💡 <strong>Modo Demo:</strong> Use "Simular Comportamentos" para gerar eventos realistas automaticamente,
-                  demonstrando cliques, reportes e conclusões de pílulas distribuídos pelos colaboradores.
+                <p className="text-blue-300 text-sm flex items-start gap-2">
+                  <Lightbulb className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Modo Demo:</strong> Use "Simular Comportamentos" para gerar eventos realistas automaticamente,
+                    demonstrando cliques, reportes e conclusões de pílulas distribuídos pelos colaboradores.
+                  </span>
                 </p>
               </div>
             )}

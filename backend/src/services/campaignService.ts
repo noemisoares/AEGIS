@@ -71,22 +71,28 @@ export async function startCampaign(
       },
     });
 
-    for (const userId of userIds) {
-      await tx.campaignTarget.upsert({
-        where: { campaignId_userId: { campaignId: campaign.id, userId } },
-        create: { campaignId: campaign.id, userId, sentAt: now },
-        update: { sentAt: now },
+    if (userIds.length > 0) {
+      await tx.campaignTarget.updateMany({
+        where: { campaignId: campaign.id, userId: { in: userIds } },
+        data: { sentAt: now },
+      });
+      await tx.campaignTarget.createMany({
+        data: userIds.map((userId) => ({ campaignId: campaign.id, userId, sentAt: now })),
+        skipDuplicates: true,
       });
 
-      await tx.simulationResult.upsert({
-        where: { campaignId_userId: { campaignId: campaign.id, userId } },
-        create: {
+      await tx.simulationResult.updateMany({
+        where: { campaignId: campaign.id, userId: { in: userIds } },
+        data: { sentAt: now, status: 'SENT' },
+      });
+      await tx.simulationResult.createMany({
+        data: userIds.map((userId) => ({
           campaignId: campaign.id,
           userId,
           status: 'SENT',
           sentAt: now,
-        },
-        update: { sentAt: now, status: 'SENT' },
+        })),
+        skipDuplicates: true,
       });
     }
   });
@@ -99,9 +105,11 @@ export async function startCampaign(
   });
 
   // Broadcast simulation sent events for real-time agents
-  for (const userId of userIds.slice(0, 20)) {
-    await logEvent('SIMULATION_SENT', userId, campaign.id, organizationId, undefined, {});
-  }
+  await Promise.all(
+    userIds.slice(0, 20).map((userId) =>
+      logEvent('SIMULATION_SENT', userId, campaign.id, organizationId, undefined, {})
+    )
+  );
 
   return {
     success: true,

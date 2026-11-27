@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ShieldCheck, User } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -60,9 +60,7 @@ export default function LoginPage() {
         
         <div className="relative z-10 text-center">
           <div className="flex items-center justify-center mb-8">
-            <div className="bg-blue-600 p-5 rounded-2xl">
-              <Shield className="w-16 h-16 text-white" />
-            </div>
+            <img src="/aegis.png" alt="AEGIS" className="w-28 h-28 object-contain" />
           </div>
           
           <h1 className="text-5xl font-bold text-white mb-4">AEGIS</h1>
@@ -89,9 +87,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="bg-blue-600 p-3 rounded-xl">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
+            <img src="/aegis.png" alt="AEGIS" className="w-11 h-11 object-contain shrink-0" />
             <div>
               <h1 className="text-2xl font-bold text-white">AEGIS</h1>
               <p className="text-slate-400 text-sm">Cibersegurança Comportamental</p>
@@ -154,16 +150,20 @@ export default function LoginPage() {
               <p className="text-xs text-slate-500 mb-3 text-center">Acesso rápido para demonstração</p>
               <div className="grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   onClick={() => fillDemo('manager')}
-                  className="text-xs bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 text-blue-300 px-3 py-2 rounded-lg transition-colors"
+                  className="text-xs bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 text-blue-300 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                 >
-                  👩‍💼 Juliana (CISO)
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span>Juliana (CISO)</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => fillDemo('collaborator')}
-                  className="text-xs bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-colors"
+                  className="text-xs bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                 >
-                  👨‍💻 Carlos (Colaborador)
+                  <User className="w-3.5 h-3.5 shrink-0" />
+                  <span>Carlos (Colaborador)</span>
                 </button>
               </div>
             </div>

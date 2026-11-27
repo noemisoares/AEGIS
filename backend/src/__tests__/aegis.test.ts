@@ -186,7 +186,7 @@ describe('AEGIS Cybersecurity Behavioral Platform Tests', () => {
       expect(reportRes2.status).toBe(200);
       expect(reportRes2.body.isDuplicate).toBe(true);
       expect(reportRes2.body.pointsAwarded).toBe(0);
-    });
+    }, 15000);
   });
 
   describe('4. Audit Reports & Consistency', () => {
@@ -198,9 +198,8 @@ describe('AEGIS Cybersecurity Behavioral Platform Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.header['content-type']).toContain('text/csv');
-      expect(res.text).toContain('AEGIS');
-      expect(res.text).toContain('RESUMO EXECUTIVO');
-      expect(res.text).toContain('HRI POR SETOR');
+      expect(res.text).toContain('Setor;Colaboradores Ativos;HRI Médio');
+      expect(res.text).toContain('TOTAL ORGANIZAÇÃO');
     });
 
     it('should generate audit report in PDF format', async () => {

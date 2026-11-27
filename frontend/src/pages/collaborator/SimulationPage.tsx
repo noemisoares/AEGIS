@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
-import { AlertTriangle, CheckCircle, ArrowLeft, Shield } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ArrowLeft, Shield, Lightbulb, Search } from 'lucide-react';
 
 interface SimulationData {
   id: string;
@@ -152,8 +152,9 @@ export default function SimulationPage() {
           </div>
 
           <div className="mt-4 bg-slate-900 rounded-xl p-4 border border-slate-800">
-            <p className="text-slate-400 text-sm text-center">
-              💡 Esta é uma simulação controlada do AEGIS. Clique em qualquer link para ver o resultado.
+            <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
+              <Lightbulb className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>Esta é uma simulação controlada do AEGIS. Clique em qualquer link para ver o resultado.</span>
             </p>
           </div>
         </div>
@@ -170,7 +171,7 @@ export default function SimulationPage() {
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-10 h-10 text-red-400 animate-pulse" />
             </div>
-            <h2 className="text-red-400 text-xl font-bold mb-2">⚠️ SIMULAÇÃO DE PHISHING</h2>
+            <h2 className="text-red-400 text-xl font-bold mb-2">SIMULAÇÃO DE PHISHING</h2>
             <p className="text-slate-300 text-sm">
               Você clicou em um link de phishing simulado.
               <br />O AEGIS identificou sua interação.
@@ -214,19 +215,28 @@ export default function SimulationPage() {
 
               {/* What went wrong */}
               <div className="bg-slate-800/50 rounded-xl p-4">
-                <h3 className="text-orange-400 font-semibold mb-2">🔍 Sinais que indicavam phishing</h3>
+                <h3 className="text-orange-400 font-semibold mb-2 flex items-center gap-2">
+                  <Search className="w-4 h-4 shrink-0" />
+                  <span>Sinais que indicavam phishing</span>
+                </h3>
                 <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">{pill.whatWentWrong}</p>
               </div>
 
               {/* Tips */}
               <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-4">
-                <h3 className="text-blue-400 font-semibold mb-2">💡 Como identificar na próxima vez</h3>
+                <h3 className="text-blue-400 font-semibold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 shrink-0" />
+                  <span>Como identificar na próxima vez</span>
+                </h3>
                 <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">{pill.tips}</p>
               </div>
 
               {/* Correct action */}
               <div className="bg-emerald-900/20 border border-emerald-800 rounded-xl p-4">
-                <h3 className="text-emerald-400 font-semibold mb-2">✅ O que fazer na próxima vez</h3>
+                <h3 className="text-emerald-400 font-semibold mb-2 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>O que fazer na próxima vez</span>
+                </h3>
                 <p className="text-slate-300 text-sm leading-relaxed">{pill.correctAction}</p>
               </div>
 

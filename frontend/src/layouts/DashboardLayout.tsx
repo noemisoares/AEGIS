@@ -1,17 +1,28 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  Shield, LayoutDashboard, Users, Target, TrendingUp,
-  FileText, LogOut, Bell, Settings, Flag
+  LayoutDashboard, Users, Target, TrendingUp,
+  FileText, LogOut, Bell, Settings, Flag, Menu, X
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../lib/api';
 
-function NavItem({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick?: () => void;
+}) {
   return (
     <NavLink
       to={to}
       end={to === '/dashboard'}
+      onClick={onClick}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
           isActive
@@ -20,8 +31,8 @@ function NavItem({ to, icon: Icon, label }: { to: string; icon: React.ComponentT
         }`
       }
     >
-      <Icon className="w-4 h-4" />
-      {label}
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
     </NavLink>
   );
 }
@@ -32,6 +43,7 @@ export default function DashboardLayout() {
   const [notifications, setNotifications] = useState<Array<{ id: string; type: string; message: string; time: Date }>>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [newNotifCount, setNewNotifCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Connect to SSE for real-time events
@@ -118,38 +130,65 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
   return (
-    <div className="min-h-screen bg-slate-950 flex">
+    <div className="h-screen overflow-hidden bg-slate-950 flex">
+      {/* Mobile backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-30 md:hidden"
+          onClick={closeMobileMenu}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-60 h-full bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Logo */}
-        <div className="flex items-center gap-3 p-5 border-b border-slate-800">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <Shield className="w-5 h-5 text-white" />
+        <div className="shrink-0 flex items-center justify-between gap-3 p-5 border-b border-slate-800">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/aegis.png"
+              alt="AEGIS"
+              className="w-9 h-9 object-contain shrink-0"
+            />
+            <div className="min-w-0">
+              <span className="text-white font-bold text-lg leading-tight block">AEGIS</span>
+              <p className="text-slate-500 text-xs truncate">SOC Dashboard</p>
+            </div>
           </div>
-          <div>
-            <span className="text-white font-bold text-lg">AEGIS</span>
-            <p className="text-slate-500 text-xs">SOC Dashboard</p>
-          </div>
+          <button
+            type="button"
+            onClick={closeMobileMenu}
+            className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg"
+            aria-label="Fechar menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        {/* Navigation (independently scrollable if viewport is short) */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Principal</p>
-          <NavItem to="/dashboard" icon={LayoutDashboard} label="Visão Geral" />
-          <NavItem to="/dashboard/colaboradores" icon={Users} label="Colaboradores" />
-          <NavItem to="/dashboard/campanhas" icon={Target} label="Campanhas" />
-          <NavItem to="/dashboard/denuncias" icon={Flag} label="Denúncias" />
+          <NavItem to="/dashboard" icon={LayoutDashboard} label="Visão Geral" onClick={closeMobileMenu} />
+          <NavItem to="/dashboard/colaboradores" icon={Users} label="Colaboradores" onClick={closeMobileMenu} />
+          <NavItem to="/dashboard/campanhas" icon={Target} label="Campanhas" onClick={closeMobileMenu} />
+          <NavItem to="/dashboard/denuncias" icon={Flag} label="Denúncias" onClick={closeMobileMenu} />
           
           <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-3 mb-2 mt-5">Governança</p>
-          <NavItem to="/dashboard/hri" icon={TrendingUp} label="Risco Humano (HRI)" />
-          <NavItem to="/dashboard/relatorios" icon={FileText} label="Relatórios" />
+          <NavItem to="/dashboard/hri" icon={TrendingUp} label="Risco Humano (HRI)" onClick={closeMobileMenu} />
+          <NavItem to="/dashboard/relatorios" icon={FileText} label="Relatórios" onClick={closeMobileMenu} />
         </nav>
 
-        {/* User info */}
-        <div className="p-4 border-t border-slate-800">
+        {/* User info & Logout anchored at bottom */}
+        <div className="shrink-0 p-4 border-t border-slate-800 bg-slate-900">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
               {user?.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
@@ -157,19 +196,31 @@ export default function DashboardLayout() {
               <p className="text-slate-500 text-xs">{user?.role === 'MANAGER' ? 'Gestor / CISO' : 'Admin'}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-slate-400 hover:text-red-400 text-sm transition-colors w-full px-2 py-1 rounded">
-            <LogOut className="w-4 h-4" />
-            Sair
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-slate-400 hover:text-red-400 hover:bg-slate-800/70 text-sm transition-colors w-full px-2.5 py-2 rounded-lg"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Sair</span>
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top bar */}
-        <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-slate-400 text-sm">
+        <header className="shrink-0 bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+              aria-label="Abrir menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <p className="text-slate-400 text-sm truncate">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
@@ -215,7 +266,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

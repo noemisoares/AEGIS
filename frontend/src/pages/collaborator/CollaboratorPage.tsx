@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/api';
-import { Shield, Flag, Star, AlertTriangle, CheckCircle, LogOut, Bell, BookOpen } from 'lucide-react';
+import { Shield, Flag, Star, AlertTriangle, CheckCircle, LogOut, Bell, BookOpen, Search, Clock, Landmark, KeyRound, ShieldCheck, Target } from 'lucide-react';
 
 interface ActiveSim {
   id: string;
@@ -96,12 +96,12 @@ export default function CollaboratorPage() {
     CRITICAL: 'Risco Crítico',
   };
 
-  const REASON_LABEL: Record<string, string> = {
-    THREAT_REPORTED_CORRECT: '🛡️ Ameaça reportada corretamente',
-    THREAT_IDENTIFIED: '🔍 Ameaça identificada',
-    PILL_COMPLETED: '📚 Pílula educativa concluída',
-    CAMPAIGN_PARTICIPATION: '🎯 Participação em campanha',
-    BONUS: '⭐ Bônus',
+  const REASON_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+    THREAT_REPORTED_CORRECT: { label: 'Ameaça reportada corretamente', icon: ShieldCheck },
+    THREAT_IDENTIFIED: { label: 'Ameaça identificada', icon: Search },
+    PILL_COMPLETED: { label: 'Pílula educativa concluída', icon: BookOpen },
+    CAMPAIGN_PARTICIPATION: { label: 'Participação em campanha', icon: Target },
+    BONUS: { label: 'Bônus', icon: Star },
   };
 
   return (
@@ -110,9 +110,7 @@ export default function CollaboratorPage() {
       <header className="bg-slate-900 border-b border-slate-800 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
+            <img src="/aegis.png" alt="AEGIS" className="w-9 h-9 object-contain shrink-0" />
             <div>
               <span className="text-white font-bold">AEGIS</span>
               <p className="text-slate-500 text-xs">Agente de Segurança</p>
@@ -212,7 +210,7 @@ export default function CollaboratorPage() {
                   className="btn-secondary flex-1 sm:flex-none flex items-center justify-center gap-2 border-emerald-800 text-emerald-400 hover:bg-emerald-900/20"
                 >
                   <Flag className="w-4 h-4" />
-                  {reporting ? 'Reportando...' : '🛡️ Reportar como Ameaça (+20 pts)'}
+                  {reporting ? 'Reportando...' : 'Reportar como Ameaça (+20 pts)'}
                 </button>
               </div>
             </div>
@@ -248,15 +246,22 @@ export default function CollaboratorPage() {
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {activity.transactions.length === 0 ? (
                 <p className="text-slate-500 text-sm text-center py-4">Nenhuma atividade ainda</p>
-              ) : activity.transactions.slice(0, 10).map(t => (
-                <div key={t.id} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-                  <div>
-                    <p className="text-slate-300 text-sm">{REASON_LABEL[t.reason] || t.description}</p>
-                    <p className="text-slate-600 text-xs">{new Date(t.createdAt).toLocaleString('pt-BR')}</p>
+              ) : activity.transactions.slice(0, 10).map(t => {
+                const reasonInfo = REASON_META[t.reason];
+                const ReasonIcon = reasonInfo?.icon;
+                return (
+                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                    <div>
+                      <p className="text-slate-300 text-sm flex items-center gap-2">
+                        {ReasonIcon && <ReasonIcon className="w-4 h-4 text-blue-400 shrink-0" />}
+                        <span>{reasonInfo?.label || t.description}</span>
+                      </p>
+                      <p className="text-slate-600 text-xs">{new Date(t.createdAt).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <span className="text-yellow-400 font-bold">+{t.points} pts</span>
                   </div>
-                  <span className="text-yellow-400 font-bold">+{t.points} pts</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -269,16 +274,20 @@ export default function CollaboratorPage() {
           </h3>
           <ul className="space-y-2 text-slate-400 text-sm">
             {[
-              '🔍 Sempre verifique o domínio do remetente antes de clicar em links',
-              '⏰ Desconfie de mensagens que criam urgência artificial',
-              '🏦 Sua empresa nunca pedirá dados bancários por e-mail',
-              '🔑 Nunca clique em links de redefinição de senha enviados por e-mail',
-              '🛡️ Em caso de dúvida, use o botão de Reportar Ameaça do AEGIS',
-            ].map(tip => (
-              <li key={tip} className="flex items-start gap-2 py-1 border-b border-slate-800/50 last:border-0">
-                <span>{tip}</span>
-              </li>
-            ))}
+              { icon: Search, text: 'Sempre verifique o domínio do remetente antes de clicar em links' },
+              { icon: Clock, text: 'Desconfie de mensagens que criam urgência artificial' },
+              { icon: Landmark, text: 'Sua empresa nunca pedirá dados bancários por e-mail' },
+              { icon: KeyRound, text: 'Nunca clique em links de redefinição de senha enviados por e-mail' },
+              { icon: ShieldCheck, text: 'Em caso de dúvida, use o botão de Reportar Ameaça do AEGIS' },
+            ].map(tip => {
+              const TipIcon = tip.icon;
+              return (
+                <li key={tip.text} className="flex items-center gap-2.5 py-1 border-b border-slate-800/50 last:border-0">
+                  <TipIcon className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span>{tip.text}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </main>

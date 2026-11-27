@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import api from '../../lib/api';
-import { FileText, Download, Calendar, Building2, Target } from 'lucide-react';
+import { FileText, FileSpreadsheet, Download, Building2, Target, Check } from 'lucide-react';
 
 export default function ReportsPage() {
   const [generating, setGenerating] = useState(false);
@@ -10,19 +10,19 @@ export default function ReportsPage() {
     type: 'GENERAL',
   });
 
-  const generateReport = async () => {
+  const downloadReport = async (payload: { title: string; format: string; type: string }, filenamePrefix = 'aegis-report') => {
     setGenerating(true);
     try {
-      const res = await api.post('/audit/reports/generate', filters, {
+      const res = await api.post('/audit/reports/generate', payload, {
         responseType: 'blob',
       });
-      
-      const ext = filters.format === 'PDF' ? 'pdf' : 'csv';
-      const mime = filters.format === 'PDF' ? 'application/pdf' : 'text/csv';
+
+      const ext = payload.format === 'PDF' ? 'pdf' : 'csv';
+      const mime = payload.format === 'PDF' ? 'application/pdf' : 'text/csv;charset=utf-8';
       const url = window.URL.createObjectURL(new Blob([res.data], { type: mime }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `aegis-report-${Date.now()}.${ext}`;
+      link.download = `${filenamePrefix}-${Date.now()}.${ext}`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (e) {
@@ -32,6 +32,8 @@ export default function ReportsPage() {
       setGenerating(false);
     }
   };
+
+  const generateReport = () => downloadReport(filters);
 
   return (
     <div className="p-6 space-y-6">
@@ -72,24 +74,28 @@ export default function ReportsPage() {
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Formato de Exportação</label>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setFilters(f => ({ ...f, format: 'PDF' }))}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center gap-2 ${
                     filters.format === 'PDF'
                       ? 'bg-red-900/30 border-red-800 text-red-400'
                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  📄 PDF
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span>PDF</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setFilters(f => ({ ...f, format: 'CSV' }))}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center gap-2 ${
                     filters.format === 'CSV'
                       ? 'bg-green-900/30 border-green-800 text-green-400'
                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  📊 CSV
+                  <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                  <span>CSV</span>
                 </button>
               </div>
             </div>
@@ -110,7 +116,7 @@ export default function ReportsPage() {
               'Data e horário de geração do relatório',
             ].map(item => (
               <li key={item} className="flex items-start gap-2">
-                <span className="text-blue-500 mt-0.5">✓</span>
+                <Check className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                 {item}
               </li>
             ))}
@@ -154,20 +160,12 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <button
+                  type="button"
+                  disabled={generating}
                   onClick={() => {
-                    setFilters({ title: preset.title, format: preset.format, type: preset.type });
-                    // Auto-generate
-                    setTimeout(() => {
-                      api.post('/audit/reports/generate', { title: preset.title, format: preset.format, type: preset.type }, { responseType: 'blob' })
-                        .then(res => {
-                          const ext = preset.format === 'PDF' ? 'pdf' : 'csv';
-                          const url = window.URL.createObjectURL(new Blob([res.data]));
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = `aegis-${preset.type.toLowerCase()}-${Date.now()}.${ext}`;
-                          link.click();
-                        });
-                    }, 100);
+                    const nextFilters = { title: preset.title, format: preset.format, type: preset.type };
+                    setFilters(nextFilters);
+                    downloadReport(nextFilters, `aegis-${preset.type.toLowerCase()}`);
                   }}
                   className="btn-secondary w-full text-xs flex items-center justify-center gap-1.5"
                 >

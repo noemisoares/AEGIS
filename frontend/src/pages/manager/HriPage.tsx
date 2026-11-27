@@ -4,7 +4,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell
 } from 'recharts';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, BarChart3 } from 'lucide-react';
 
 interface DepartmentHri {
   id: string;
@@ -119,7 +119,10 @@ export default function HriPage() {
 
       {/* Methodology note */}
       <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
-        <h3 className="text-slate-300 font-medium text-sm mb-2">📊 Metodologia HRI (documentada)</h3>
+        <h3 className="text-slate-300 font-medium text-sm mb-2 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-blue-400 shrink-0" />
+          <span>Metodologia HRI (documentada)</span>
+        </h3>
         <div className="grid grid-cols-5 gap-2 text-xs text-slate-500">
           {[
             { factor: 'Taxa de Cliques', weight: '40%', desc: 'Principal indicador de vulnerabilidade' },
